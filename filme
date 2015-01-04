@@ -1,0 +1,78 @@
+#!/bin/sh
+#####
+# Dieses Script verschiebt die Filme und benennt sie um.
+# Ausserdem filtert es Dateien mit Stereo Sound heraus und verschiebt sie in ein extra Verzeichnis
+#####
+
+###
+## Variablendeklaration
+###
+# Pfade die verwendet werden
+###
+# Pfad in dem die Filme heruntergeladen wurden
+DownloadFolderFilme="/opt/SABnzbd2/Downloads/complete/filme/"
+# Pfad in den die Filme verschoben werden
+BaseDir="/media/d3c21c66-af4b-41d4-b098-462e83fa641d/Filme/Deutsch/HD/"
+# Temporärer Pfad in den die Filme mit Stereo Sound verschoben werden
+TempFolder="/opt/tmp/"
+# Zielpfad in den die Filme mit Stereo Sound verschoben werden
+TrashFolder="/media/d3c21c66-af4b-41d4-b098-462e83fa641d/Filme/Deutsch/#trash/"
+# Datei in der die Stereodateien eingetragen werden
+MatchedFiles="/tmp/matchedfiles"
+###
+# Filebot Syntax Variablen
+###
+# Syntax des Ordners
+FilmOrdner="{n.replaceAll(/[!?.]+\$/).replaceAll(/[\`´‘’ʻ]/, \"'\").replace(':',' -')} ({y}) {vf}"
+# Syntax der Datei
+FilmDatei="{n.replaceAll(/[!?.]+\$/).replaceAll(/[\`´‘’ʻ]/, \"'\").replace(':',' -')} ({y}) {vf}{' CD'+pi}"
+###
+# Variablendeklaration ende
+###
+
+###
+# Berechtigungen anpassen
+###
+# Entferne ACLs
+setfacl -Rb "${DownloadFolderFilme}"
+# Aendere den Besitzer des Download Ordners auf root:users
+chown root:users "${DownloadFolderFilme}" -R
+# Aendere die mod der Ordner und Dateien
+find "${DownloadFolderFilme}" -type d -exec chmod 775 {} +
+find "${DownloadFolderFilme}" -type f -exec chmod 664 {} +
+
+###
+# Filtere Stereo Dateien heraus
+###
+# Wechsel in das Downloadverzeichnis
+cd "${DownloadFolderFilme}"
+# Leere $MatchedFiles
+cat /dev/null > "${MatchedFiles}"
+# Filterschleife
+for f in *
+do
+	# Liste alles auf, grep filter auf mkv dateien damit mediainfo keinen Fehler wirft,
+	# mediainfo -f gibt alle Medieninformationen aus, filtere auf "2 Channels"
+	# und schreibe die Dateien auf die dies Zutrifft nach $MatchedFiles"
+        ls "${f}" | grep mkv | mediainfo -f "${f}" | grep "2 channels" && echo "${f}" >> "${MatchedFiles}"
+done
+
+# Verschiebe alle gefilterten Filme in ein temporaeres Verzeichnis
+while read p; do
+	mv "${p}" "${TempFolder}"
+done < "${MatchedFiles}"
+
+# Filebot umbenennen und verschieben der Stereo Filme
+filebot -rename "${TempFolder}" --db themoviedb --format "${TrashFolder}/${FilmOrdner}/${FilmDatei}" --lang de -r -non-strict --conflict override
+# Filebot aufraeumen des temporaeren Verzeichnisses
+filebot -script fn:cleaner "${TempFolder}"
+
+# Filebot umbennen und verschieben der restlichen Filme
+filebot -rename "${DownloadFolderFilme}" --db themoviedb --format "${BaseDir}/${FilmOrdner}/${FilmDatei}" -r --lang de
+# Aufraeumen des Download Verzeichnisses
+filebot -script fn:cleaner "${DownloadFolderFilme}"
+
+# Berechtigungen im Zielverzeichnis anpassen (Verzeichnisse und Dateien)
+find "${BaseDir}" -type d -exec chmod 775 {} +
+find "${BaseDir}" -type f -exec chmod 664 {} +
+

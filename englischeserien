@@ -1,0 +1,25 @@
+#!/bin/sh
+
+BaseDir="/media/d3c21c66-af4b-41d4-b098-462e83fa641d/Serien/"
+
+DownloadFolderTVen="/opt/SABnzbd/Downloads/complete/tv/"
+
+Serie="{n.replaceAll(/[!?.]+\$/).replaceAll(/[\`´‘’ʻ]/, \"'\").replace(':',' -')}"
+
+Titel="{t.replaceAll(/[!?.]+\$/).replaceAll(/[\`´‘’ʻ]/, \"'\")}"
+
+setfacl -Rb "${DownloadFolderTVen}"
+
+chown root:users "${DownloadFolderTVen}" -R
+
+find "${DownloadFolderTVen}" -type d -exec chmod 775 {} +
+
+find "${DownloadFolderTVen}" -type f -exec chmod 664 {} +
+
+filebot -rename "${DownloadFolderTVen}" --db thetvdb --format "${BaseDir}/Englisch/${Serie}/Staffel {s} EN {vf}/${Serie} - {s00e00} - ${Titel}" -non-strict -r
+
+filebot -script fn:cleaner "${DownloadFolderTVen}"
+
+find "${BaseDir}" -type d -exec chmod 775 {} +
+
+find "${BaseDir}" -type f -exec chmod 664 {} +
