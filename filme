@@ -76,3 +76,5 @@ filebot -script fn:cleaner "${DownloadFolderFilme}"
 find "${BaseDir}" -type d -exec chmod 775 {} +
 find "${BaseDir}" -type f -exec chmod 664 {} +
 
+find "${TrashFolder}" -type d -exec chmod 775 {} +
+find "${TrashFolder}" -type f -exec chmod 664 {} +
