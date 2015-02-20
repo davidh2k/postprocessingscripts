@@ -1,15 +1,20 @@
-#!/bin/sh
+#!/bin/bash
 #####
 # Dieses Script verschiebt die Filme und benennt sie um.
 # Ausserdem filtert es Dateien mit Stereo Sound heraus und verschiebt sie in ein extra Verzeichnis
 #####
+
+#set -x
+
 CONFIG_FILE="/opt/postprocessscripts/config.txt"
+
 if [ -f ${CONFIG_FILE} ]; then
-. ${CONFIG_FILE}
+	. ${CONFIG_FILE}
 else
-echo "Aborted, no configuration file found."
-exit 1
+	echo "Aborted, no configuration file found."
+	exit 1
 fi
+
 ###
 # Berechtigungen anpassen
 ###
@@ -20,6 +25,7 @@ chown root:users "${DownloadFolderFilme}" -R
 # Aendere die mod der Ordner und Dateien
 find "${DownloadFolderFilme}" -type d -exec chmod 775 {} +
 find "${DownloadFolderFilme}" -type f -exec chmod 664 {} +
+
 ###
 # Filtere Stereo Dateien heraus
 ###
@@ -30,29 +36,35 @@ cat /dev/null > "${MatchedFiles}"
 # Filterschleife
 for f in *
 do
-# Liste alles auf, grep filter auf mkv dateien damit mediainfo keinen Fehler wirft,
-# mediainfo -f gibt alle Medieninformationen aus, filtere auf "2 Channels"
-# und schreibe die Dateien auf die dies Zutrifft nach $MatchedFiles"
-ls "${f}" | grep mkv | mediainfo -f "${f}" | grep "2 channels" && echo "${f}" >> "${MatchedFiles}"
+	# Liste alles auf, grep filter auf mkv dateien damit mediainfo keinen Fehler wirft,
+	# mediainfo -f gibt alle Medieninformationen aus, filtere auf "2 Channels"
+	# und schreibe die Dateien auf die dies Zutrifft nach $MatchedFiles"
+#        ls "${f}" | grep mkv | mediainfo -f "${f}" | grep "2 channels" && echo "${f}" >> "${MatchedFiles}"
+	TEMPVAR=$(ls "${f}" | grep mkv | mediainfo -f "${f}" | grep "2 channels")
+        [ -n "$TEMPVAR" ] && VARIABLE="$VARIABLE ${f}"
 done
+
 # Verschiebe alle gefilterten Filme in ein temporaeres Verzeichnis
 while read p; do
-mv "${p}" "${TempFolder}"
-done < "${MatchedFiles}"
+#	mv "${p}" "${TempFolder}"
+	echo $p
+done | ${VARIABLE}
+
+exit 1
+
 # Filebot umbenennen und verschieben der Stereo Filme
-if [ "$ls -A $TempFolder)" ]; then
-	filebot -rename "${TempFolder}" --db themoviedb --format "${TrashFolder}/${FilmOrdner}/${FilmDatei}" --lang de -r -non-strict --conflict auto
-else
-	echo "No File in TempFolder, nothing to do here."
-fi
+filebot -rename "${TempFolder}" --db themoviedb --format "${TrashFolder}/${FilmOrdner}/${FilmDatei}" --lang de -r -non-strict --conflict override
 # Filebot aufraeumen des temporaeren Verzeichnisses
 filebot -script fn:cleaner "${TempFolder}"
+
 # Filebot umbennen und verschieben der restlichen Filme
-filebot -rename "${DownloadFolderFilme}" --db themoviedb --format "${BaseDir}/${FilmOrdner}/${FilmDatei}" -r --lang de --conflict auto
+filebot -rename "${DownloadFolderFilme}" --db themoviedb --format "${BaseDir}/${FilmOrdner}/${FilmDatei}" -r --lang de
 # Aufraeumen des Download Verzeichnisses
 filebot -script fn:cleaner "${DownloadFolderFilme}"
+
 # Berechtigungen im Zielverzeichnis anpassen (Verzeichnisse und Dateien)
 find "${BaseDir}" -type d -exec chmod 775 {} +
 find "${BaseDir}" -type f -exec chmod 664 {} +
+
 find "${TrashFolder}" -type d -exec chmod 775 {} +
 find "${TrashFolder}" -type f -exec chmod 664 {} +

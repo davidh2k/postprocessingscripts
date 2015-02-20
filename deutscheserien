@@ -6,7 +6,7 @@ DownloadFolderTVde="/opt/SABnzbd2/Downloads/complete/tv/"
 
 Serie="{n.replaceAll(/[!?.]+\$/).replaceAll(/[\`´‘’ʻ]/, \"'\").replace(':',' -')}"
 
-Titel="{t.replaceAll(/[!?.]+\$/).replaceAll(/[\`´‘’ʻ]/, \"'\")}"
+Titel="{t.replaceAll(/[!?.]+\$/).replaceAll(/[\`´‘’ʻ]/, \"'\").replace(':',' -')}"
 
 setfacl -Rb "${DownloadFolderTVde}"
 
@@ -16,7 +16,7 @@ find "${DownloadFolderTVde}" -type d -exec chmod 775 {} +
 
 find "${DownloadFolderTVde}" -type f -exec chmod 664 {} +
 
-filebot -rename "${DownloadFolderTVde}" --db thetvdb --format "${BaseDir}/Deutsch/${Serie}/Staffel {s} DE + EN {vf}/${Serie} - {s00e00} - ${Titel}" -non-strict -r
+filebot -rename "${DownloadFolderTVde}" --db thetvdb --format "${BaseDir}/Deutsch/${Serie}/Staffel {s} DE + EN {vf}/${Serie} - {s00e00} - ${Titel}" -non-strict -r --override auto
 
 filebot -script fn:cleaner "${DownloadFolderTVde}"
 
